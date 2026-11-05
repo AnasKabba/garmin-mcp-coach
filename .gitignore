@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Sensibili e Credenziali Locali
+.env
+tokens/
+*.json
+!render.yaml
+
+# Binari locali
+cloudflared.exe
+*.exe
+
+# Log e file temporanei
+*.log
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store
+Thumbs.db

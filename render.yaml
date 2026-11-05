@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: garmin-gpt-backend
+    env: python
+    plan: free
+    region: frankfurt
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: API_KEY
+        generateValue: true
+      - key: SERVER_URL
+        sync: false
+      - key: GARMIN_TOKENS_BASE64
+        sync: false

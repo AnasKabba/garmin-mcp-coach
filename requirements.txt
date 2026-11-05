@@ -1,0 +1,11 @@
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+garminconnect>=0.3.20
+garth>=0.8.0
+pydantic>=2.6.0
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.1
+requests>=2.31.0
+httpx>=0.27.0
+mcp>=2.3.0
+sse-starlette>=2.0.0
