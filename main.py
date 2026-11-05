@@ -111,9 +111,9 @@ async def lifespan(app: FastAPI):
 # ==============================================================================
 
 app = FastAPI(
-    title="Garmin Connect AI Running Coach API - by AK Dev",
+    title="Garmin Connect AI Running Coach API - by AK Dev.",
     description=(
-        "Backend REST ad alte prestazioni sviluppato da AK Dev, ottimizzato per ChatGPT Custom Actions e Plugin MCP. "
+        "Backend REST ad alte prestazioni sviluppato da AK Dev., ottimizzato per ChatGPT Custom Actions e Plugin MCP. "
         "Consente a un coach virtuale di analizzare gli allenamenti di corsa, split km, "
         "distribuzione nelle zone cardio (Z1-Z5), dinamiche di corsa, Body Battery, "
         "qualità del sonno e tempi di recupero direttamente dal profilo Garmin dell'atleta."
