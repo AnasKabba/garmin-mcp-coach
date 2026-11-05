@@ -1,8 +1,12 @@
-# 🏃 Garmin Connect AI Running Coach Backend (FastAPI + ChatGPT Action)
+# 🏃 Garmin Connect AI Running Coach Backend (FastAPI + ChatGPT MCP Plugin & Actions)
 
-Backend REST in Python (FastAPI) progettato specificamente per collegare i dati di corsa e biometrici di **Garmin Connect** a un **Custom GPT di ChatGPT** tramite **OpenAPI Actions**.
+Backend ad alte prestazioni in Python (FastAPI + Model Context Protocol) progettato per collegare i dati di corsa e biometrici di **Garmin Connect** a **ChatGPT** come **Plugin MCP personalizzato** o **Custom Action OpenAPI**.
 
-Consente al tuo AI Coach su ChatGPT di accedere in tempo reale e in sola lettura ai tuoi allenamenti, split chilometrici, distribuzione nelle zone cardio (Z1-Z5), dinamiche di corsa, Body Battery, qualità del sonno e tempi di recupero.
+Consente al tuo AI Running Coach su ChatGPT di accedere in tempo reale e in sola lettura a:
+* **Analisi Corse**: split chilometrici lap per lap, zone cardio (Z1-Z5), dinamiche di corsa (cadenza, oscillazione verticale, tempo di contatto).
+* **Metriche di Prestazione**: **VO2 Max**, **Età di Fitness (Fitness Age)**, **Previsioni Tempi di Gara** (5K, 10K, Mezza Maratona, Maratona con ritmi al km calcolati).
+* **Stato di Forma e Recupero**: **HRV (Variabilità Cardiaca)**, Training Status, Carico Acuto (ACWR), Body Battery, Frequenza a riposo (RHR), Sonno profondo/REM e tempi di recupero.
+* **Biometria Quotidiana**: Passi, calorie attive/basali, minuti di intensità, piani saliti, stress e respirazione.
 
 ---
 
