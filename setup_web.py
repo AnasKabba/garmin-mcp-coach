@@ -352,7 +352,7 @@ async def setup_page(key: Optional[str] = Query(None, description="Chiave API pe
             </div>
 
             <div class="security-badge">
-                <span>🔒 Crittografia End-to-End • I token risiedono esclusivamente sul tuo server</span>
+                <span>🔒 Sviluppato da <strong>AK Dev</strong> • Crittografia End-to-End</span>
             </div>
         </div>
 

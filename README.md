@@ -1,5 +1,8 @@
 # 🏃 Garmin Connect AI Running Coach Backend (FastAPI + ChatGPT MCP Plugin & Actions)
 
+> ⚡ **Sviluppato da AK Dev**  
+> *Integrazione ingegnerizzata per collegare la telemetria Garmin Connect con l'intelligenza artificiale di ChatGPT.*
+
 Backend ad alte prestazioni in Python (FastAPI + Model Context Protocol) progettato per collegare i dati di corsa e biometrici di **Garmin Connect** a **ChatGPT** come **Plugin MCP personalizzato** o **Custom Action OpenAPI**.
 
 Consente al tuo AI Running Coach su ChatGPT di accedere in tempo reale e in sola lettura a:
@@ -201,3 +204,11 @@ Per verificare l'integrità del codice e della sicurezza in qualsiasi momento:
 ```bash
 python -m unittest test_endpoints.py
 ```
+
+---
+
+## 👨‍💻 Autore & Sviluppo
+
+* **Autore**: Sviluppato da **AK Dev**
+* **Repository GitHub**: [github.com/AnasKabba/garmin-mcp-coach](https://github.com/AnasKabba/garmin-mcp-coach)
+* **Licenza**: MIT

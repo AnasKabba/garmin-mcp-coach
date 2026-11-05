@@ -10,8 +10,8 @@ from garmin_client import garmin_service
 
 # Inizializza l'istanza del server MCP
 mcp_server = MCPServer(
-    name="Garmin Running Coach",
-    description="Plugin per analisi corse, split chilometrici, zone cardio, sonno e recupero da Garmin Connect.",
+    name="Garmin Running Coach by AK Dev",
+    description="Plugin sviluppato da AK Dev per analisi corse, split chilometrici, zone cardio, VO2 Max, sonno e recupero da Garmin Connect.",
     version="1.0.0",
 )
 
