@@ -1,214 +1,179 @@
-# 🏃 Garmin Connect AI Running Coach Backend (FastAPI + ChatGPT MCP Plugin & Actions)
+# Garmin Connect AI Running Coach Backend (FastAPI + MCP Plugin)
 
-> ⚡ **Sviluppato da AK Dev.**  
-> *Integrazione ingegnerizzata per collegare la telemetria Garmin Connect con l'intelligenza artificiale di ChatGPT.*
+Sviluppato da AK Dev.
 
-Backend ad alte prestazioni in Python (FastAPI + Model Context Protocol) progettato per collegare i dati di corsa e biometrici di **Garmin Connect** a **ChatGPT** come **Plugin MCP personalizzato** o **Custom Action OpenAPI**.
+Backend in Python basato su FastAPI e Model Context Protocol (MCP) per connettere la telemetria e i dati biometrici di Garmin Connect a ChatGPT, utilizzabile sia come plugin MCP nativo che come Custom Action OpenAPI.
 
-Consente al tuo AI Running Coach su ChatGPT di accedere in tempo reale e in sola lettura a:
-* **Analisi Corse**: split chilometrici lap per lap, zone cardio (Z1-Z5), dinamiche di corsa (cadenza, oscillazione verticale, tempo di contatto).
-* **Metriche di Prestazione**: **VO2 Max**, **Età di Fitness (Fitness Age)**, **Previsioni Tempi di Gara** (5K, 10K, Mezza Maratona, Maratona con ritmi al km calcolati).
-* **Stato di Forma e Recupero**: **HRV (Variabilità Cardiaca)**, Training Status, Carico Acuto (ACWR), Body Battery, Frequenza a riposo (RHR), Sonno profondo/REM e tempi di recupero.
-* **Biometria Quotidiana**: Passi, calorie attive/basali, minuti di intensità, piani saliti, stress e respirazione.
+L'applicazione espone in sola lettura i dati telemetrici dell'atleta:
+* Analisi delle corse: split chilometrici lap per lap, tempo e percentuali nelle zone cardiache (Z1-Z5), dinamiche di corsa (cadenza, oscillazione verticale, tempo di contatto al suolo).
+* Metriche di prestazione: VO2 Max (stima e valore preciso), età di fitness rispetto all'età anagrafica, previsioni ufficiali dei tempi di gara (5 km, 10 km, mezza maratona, maratona) con calcolo dei ritmi al chilometro.
+* Fisiologia e recupero: variabilità della frequenza cardiaca (HRV status e intervallo di baseline), stato dell'allenamento, carico acuto e cronico (ACWR), Body Battery, frequenza cardiaca a riposo (RHR), analisi delle fasi del sonno e tempo di recupero consigliato.
+* Biometria quotidiana: passi, calorie attive e basali, minuti di intensità moderata e vigorosa, piani saliti, livelli di stress e frequenza respiratoria.
 
 ---
 
-## 📁 Struttura del Progetto
+## Struttura del repository
 
 ```text
 garmin-gpt-backend/
-├── main.py              # API FastAPI con sicurezza, schema OpenAPI e gestione endpoint
-├── garmin_client.py     # Wrapper Garmin con gestione token, auto-reconnect e parsing snello
-├── setup_auth.py        # CLI interattiva per primo login con email/password e supporto MFA (2FA)
-├── test_endpoints.py    # Test di validazione automatica (autenticazione, parsing e risposte)
-├── requirements.txt     # Dipendenze Python (FastAPI, uvicorn, garminconnect, garth, pydantic)
-├── .env.example         # Template variabili d'ambiente
-├── Dockerfile           # Immagine Docker containerizzata multi-platform (Python 3.12-slim)
-├── .dockerignore        # File ignorati durante la build Docker
-├── render.yaml          # Blueprint per deploy rapido su Render
-├── Procfile             # Configurazione di avvio per Railway / Heroku
-└── README.md            # Guida completa all'installazione, deploy e configurazione ChatGPT
+├── main.py              # Applicazione FastAPI, routing REST ed endpoint SSE/Streamable HTTP
+├── mcp_server.py        # Definizione del server MCP e registrazione degli strumenti per ChatGPT
+├── garmin_client.py     # Client Garmin Connect con gestione sessione, auto-refresh e modelli Pydantic
+├── setup_web.py         # Interfaccia web per primo login e gestione codice MFA
+├── setup_auth.py        # Script CLI alternativo per autenticazione iniziale
+├── test_endpoints.py    # Test di validazione automatica degli endpoint e della sicurezza
+├── requirements.txt     # Dipendenze applicative (FastAPI, uvicorn, mcp, garminconnect, garth)
+├── .env.example         # Esempio di configurazione delle variabili d'ambiente
+├── Dockerfile           # Immagine container multi-platform (Python 3.12-slim)
+├── .dockerignore        # File esclusi dal build del container
+├── render.yaml          # Blueprint di deployment per Render
+└── Procfile             # Configurazione di avvio per piattaforme cloud PaaS
 ```
 
 ---
 
-## ⚡ 1. Installazione e Bootstrap Locale
+## Architettura e sicurezza
 
-### Prerequisiti
-* Python 3.11 o 3.12
-* Account Garmin Connect (anche con autenticazione a due fattori attiva)
+L'autenticazione con Garmin Connect impiega il protocollo OAuth con token di sessione persistenti (refresh token).
 
-### Passaggi:
+I token di sessione vengono serializzati in una stringa Base64 (`GARMIN_TOKENS_BASE64`). Questa architettura consente il deployment su ambienti serverless o container cloud effimeri senza richiedere volumi persistenti su disco o la memorizzazione di credenziali in chiaro.
 
-1. **Clona o entra nella cartella del progetto:**
-   ```bash
-   cd garmin-gpt-backend
-   ```
-
-2. **Crea e attiva l'ambiente virtuale:**
-   * **Linux/macOS:**
-     ```bash
-     python3 -m venv .venv
-     source .venv/bin/activate
-     ```
-   * **Windows (PowerShell):**
-     ```powershell
-     python -m venv .venv
-     .\.venv\Scripts\Activate.ps1
-     ```
-
-3. **Installa le dipendenze:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Crea il file `.env` dal template:**
-   ```bash
-   cp .env.example .env
-   ```
-   *Modifica `API_KEY` con una password segreta complessa (es. generata con `python -c "import secrets; print(secrets.token_hex(24))"`).*
+Il file `.gitignore` impedisce il tracciamento di token locali, file `.env` o credenziali private nel repository Git.
 
 ---
 
-## 🔐 2. Primo Login e Gestione Token Garmin (Supporto MFA)
+## Deployment su cloud (Render)
 
-Garmin Connect richiede un primo accesso interattivo con supporto MFA (codice di verifica a 6 cifre via email/SMS). Lo script `setup_auth.py` automatizza l'intero processo:
+Il deployment su Render consente di mantenere il server attivo 24 ore su 24 con certificato HTTPS gestito.
+
+### 1. Creazione del servizio web
+1. Accedere alla dashboard di [render.com](https://render.com).
+2. Selezionare **New +** e scegliere **Web Service**.
+3. Selezionare l'opzione **Build and deploy from a Git repository**.
+4. Inserire l'URL pubblico del repository:
+   ```text
+   https://github.com/AnasKabba/garmin-mcp-coach
+   ```
+5. Cliccare su **Connect**.
+
+### 2. Parametri di configurazione
+* **Name**: `garmin-mcp-coach` (o un identificativo a scelta)
+* **Region**: `Frankfurt (EU Central)`
+* **Branch**: `main`
+* **Runtime**: `Python 3`
+* **Build Command**: `pip install -r requirements.txt`
+* **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+* **Instance Type**: `Free`
+
+### 3. Variabili d'ambiente
+Nella sezione **Environment Variables**, configurare le seguenti chiavi:
+
+| Variabile | Descrizione | Obbligatoria |
+| :--- | :--- | :--- |
+| `API_KEY` | Chiave segreta personalizzata per proteggere le comunicazioni | Sì |
+| `GARMIN_TOKENS_BASE64` | Stringa Base64 dei token generata in fase di primo accesso | Sì |
+| `SERVER_URL` | URL pubblico del servizio generato da Render (es. `https://garmin-mcp-coach.onrender.com`) | Consigliata |
+
+Al termine dell'inserimento, cliccare su **Deploy Web Service**. Il container verrà compilato e avviato in circa 60-90 secondi.
+
+---
+
+## Deployment alternativo con Docker
+
+Il repository include un `Dockerfile` ottimizzato basato su `python:3.12-slim`.
+
+Per compilare ed eseguire il container in ambiente cloud o host dedicato:
 
 ```bash
-python setup_auth.py
-```
+docker build -t garmin-mcp-coach .
 
-### Cosa fa lo script:
-1. Chiede email e password Garmin (se presenti in `.env` le propone come default).
-2. Se il tuo account ha il 2FA abilitato, chiede a console il **codice MFA ricevuto**.
-3. Salva i token di sessione generati in `./tokens/garmin_tokens.json` con permessi restrittivi.
-4. Genera una stringa `GARMIN_TOKENS_BASE64` che puoi salvare nel `.env`. **Questa stringa ti permette di fare il deploy su Render/Railway senza aver bisogno di dischi o volumi persistenti!**
-5. Esegue un test rapido per verificare il profilo e l'ultima attività.
+docker run -d \
+  -p 8000:8000 \
+  -e API_KEY="tua_chiave_segreta" \
+  -e GARMIN_TOKENS_BASE64="stringa_base64_dei_token" \
+  --name garmin-coach \
+  garmin-mcp-coach
+```
 
 ---
 
-## 🚀 3. Avvio del Server Locale
+## Collegamento a ChatGPT
 
-Avvia FastAPI con Uvicorn:
-
-```bash
-uvicorn main:app --reload --port 8000
-```
-
-* **Documentazione Swagger interattiva:** [http://localhost:8000/docs](http://localhost:8000/docs)
-* **Schema OpenAPI per ChatGPT:** [http://localhost:8000/openapi.json](http://localhost:8000/openapi.json)
-* **Informativa Privacy:** [http://localhost:8000/privacy](http://localhost:8000/privacy)
-
-Puoi testare gli endpoint direttamente da Swagger UI inserendo la tua `API_KEY` cliccando sul pulsante verde **Authorize** in alto a destra.
-
----
-
-## 🌐 4. Deploy Cloud per ChatGPT (Railway o Render)
-
-OpenAI richiede che l'URL dell'Action sia **pubblico e con HTTPS**.
-
-### Opzione A: Railway (Consigliata, più rapida)
-1. Carica la cartella su una repository GitHub (privata).
-2. Vai su [Railway.app](https://railway.app), clicca **New Project** -> **Deploy from GitHub repo**.
-3. In **Variables**, imposta:
-   * `API_KEY`: la tua chiave segreta
-   * `SERVER_URL`: l'URL HTTPS assegnato da Railway (es. `https://garmin-gpt-production.up.railway.app`)
-   * `GARMIN_TOKENS_BASE64`: la stringa Base64 generata da `setup_auth.py`
-4. Il servizio si avvierà automaticamente usando il `Procfile` o il `Dockerfile`.
-
-### Opzione B: Render
-1. Vai su [Render.com](https://render.com) -> **New** -> **Blueprint**.
-2. Collega la repo (utilizzerà `render.yaml`).
-3. Inserisci le variabili d'ambiente `API_KEY`, `SERVER_URL` e `GARMIN_TOKENS_BASE64`.
-
-### Opzione C: Test Rapido Locale tramite Tunnel (Cloudflare o Ngrok)
-Se vuoi testare subito senza fare il deploy in cloud:
-```bash
-# Con Cloudflare Tunnel gratuito (nessun account necessario):
-cloudflared tunnel --url http://localhost:8000
-```
-Copia l'URL `https://<subdomain>.trycloudflare.com` e impostalo come `SERVER_URL` in `.env`.
-
----
-
-## 🤖 5. Configurazione della Custom Action in ChatGPT
-
-### Passo 1: Crea o Modifica il tuo Custom GPT
-1. Vai su [ChatGPT](https://chatgpt.com) -> Clicca sul tuo profilo -> **I miei GPT** -> **Crea un GPT**.
-2. Nella scheda **Configura** (Configure):
-   * **Nome:** `Coach Running AI` (o a piacere)
-   * **Descrizione:** `Coach atletico personale collegato al tuo orologio Garmin.`
-
-### Passo 2: Crea l'Action
-1. Scorri in basso nella scheda Configura e clicca su **Crea nuova azione** (Create new action).
-2. Alla voce **Schema**:
-   * Clicca su **Importa da URL** (Import from URL) e inserisci:
+### Configurazione come plugin MCP (consigliata)
+1. Aprire ChatGPT nel browser e accedere alla sezione **Plugin** (o integrazioni).
+2. Cliccare su **Aggiungi un server MCP personalizzato**.
+3. Compilare i campi come segue:
+   * **Nome**: `Garmin Running Coach by AK Dev.`
+   * **Descrizione**: `Analisi corse, split km, zone cardio, VO2 Max, sonno e recupero da Garmin Connect.`
+   * **Connessione**: selezionare **URL del server** e inserire l'endpoint del servizio cloud:
      ```text
-     https://tuo-dominio-pubblico.up.railway.app/openapi.json
+     https://tuo-servizio.onrender.com/mcp
      ```
-   * *Oppure copia e incolla l'intero JSON ottenuto navigando su quell'indirizzo.*
-   * ChatGPT rileverà automaticamente i 3 endpoint:
-     - `getRecentActivities`
-     - `getActivityDetails`
-     - `getHealthSummary`
-3. Alla voce **Autenticazione** (Authentication):
-   * Clicca sull'icona dell'ingranaggio ⚙️ accanto ad Authentication.
-   * **Tipo di autenticazione:** `API Key`
-   * **Tipo di autenticazione API:** Seleziona `Custom`
-   * **Nome intestazione personalizzata:** `X-API-Key`
-   * **Chiave API:** Incolla il valore della tua `API_KEY` (definita in `.env`)
-   * Clicca **Salva**.
-4. Alla voce **Informativa sulla privacy** (Privacy Policy):
-   * Inserisci: `https://tuo-dominio-pubblico.up.railway.app/privacy`
+   * **Autenticazione**: selezionare `Nessuna` (la sicurezza è garantita dall'isolamento del servizio).
+4. Accettare la dichiarazione di sicurezza e cliccare su **Crea come plugin**.
+
+### Configurazione alternativa come Custom Action OpenAPI (Custom GPT)
+Se si desidera utilizzare il servizio all'interno di un Custom GPT:
+1. Accedere all'editor del Custom GPT in **Configura** > **Crea nuova azione**.
+2. Nel campo **Schema**, selezionare **Importa da URL** e inserire:
+   ```text
+   https://tuo-servizio.onrender.com/openapi.json
+   ```
+3. Nelle impostazioni di autenticazione dell'azione:
+   * **Tipo di autenticazione**: `API Key`
+   * **Tipo di chiave**: `Custom`
+   * **Nome intestazione**: `X-API-Key`
+   * **Valore**: la chiave inserita nella variabile `API_KEY`.
+4. Nel campo **Informativa sulla privacy**:
+   ```text
+   https://tuo-servizio.onrender.com/privacy
+   ```
 
 ---
 
-## 📋 6. Istruzioni / System Prompt Consigliato per il Custom GPT
+## Strumenti MCP disponibili
 
-Copia e incolla questo testo nel campo **Istruzioni** (Instructions) del tuo Custom GPT:
+Il server registra quattro strumenti ad alta densità informativa:
 
-```markdown
-Sei un Coach Atletico e di Corsa esperto, specializzato in fisiologia dell'esercizio, allenamento polarizzato (80/20) e preparazione atletica per mezzofondo, maratona e trail running.
+1. **`get_performance_metrics`**
+   * VO2 Max (valore arrotondato, valore preciso con decimali, categoria aerobica).
+   * Età di fitness stimata e confronto con l'età anagrafica.
+   * Previsioni dei tempi di gara Garmin per 5 km, 10 km, mezza maratona e maratona con passo medio al chilometro calcolato.
+   * Stato dell'allenamento, carico acuto, intervallo di carico cronico e indice ACWR.
+   * Stato della variabilità cardiaca (HRV) con media settimanale e dell'ultima notte.
 
-Hai accesso diretto ai dati di allenamento e salute Garmin dell'atleta tramite le tue Action API integrate.
+2. **`get_health_summary`**
+   * Frequenza cardiaca a riposo (RHR) e valori minimi/massimi giornalieri.
+   * Livello di Body Battery attuale, punti ricaricati durante il sonno e punti consumati.
+   * Analisi del sonno: punteggio qualitativo (0-100), durata totale e suddivisione in sonno profondo, REM, leggero e veglia.
+   * Tempo di recupero consigliato in ore e punteggio di Training Readiness.
+   * Biometria giornaliera: passi, chilometri camminati, calorie attive e basali, minuti di intensità, piani saliti, livello di stress medio e frequenza respiratoria.
 
-### REGOLE DI UTILIZZO DELLE ACTION:
-1. Quando l'atleta chiede come sono andati gli ultimi allenamenti o che corse ha fatto di recente:
-   - Invoca `getRecentActivities(limit=5, activity_type='running')`.
-   - Analizza: passo medio, distanza, frequenza cardiaca media e massima, e soprattutto l'Aerobic ed Anaerobic Training Effect.
-2. Quando l'atleta chiede un'analisi dettagliata di una corsa specifica:
-   - Invoca `getActivityDetails(activity_id=...)`.
-   - Esamina la tenuta del ritmo negli split chilometrici (pacing regolare vs negative split vs crollo finale).
-   - Valuta la percentuale di tempo trascorsa nelle zone cardio (Z1-Z5): se era una corsa lenta, verifica che sia rimasto prevalentemente in Zona 2; se erano ripetute o tempo run, analizza il tempo in Z4/Z5.
-   - Controlla le dinamiche di corsa se presenti: cadenza (ottimale 165-185 SPM), oscillazione verticale (< 8-9 cm indica ottima economia) e tempo di contatto con il suolo (GCT).
-3. Quando l'atleta chiede "Come sto oggi?", "Posso allenarmi forte?", "Che allenamento mi consigli oggi?":
-   - Invoca SEMPRE `getHealthSummary()`.
-   - Verifica:
-     * Frequenza cardiaca a riposo (RHR): se è sensibilmente più alta della media, indica affaticamento o stress sistemico.
-     * Body Battery: livello attuale e carica notturna.
-     * Sonno: ore totali, sleep score e percentuale di sonno profondo/REM.
-     * Tempo di recupero consigliato (recovery_time_hours): se superiore a 24-36h, consiglia recupero attivo, mobilità o fondo lentissimo Z1/Z2.
+3. **`get_recent_activities`**
+   * Elenco delle ultime sessioni registrate con distanza, durata attiva, passo medio al chilometro, dislivello positivo e negativo, frequenza cardiaca media e massima, cadenza e Training Effect aerobico/anaerobico.
 
-### TONO E STILE:
-- Sii incoraggiante, professionale, pragmatico e orientato ai dati.
-- Non limitarti a ripetere i numeri che l'API restituisce: interpretali dal punto di vista dell'adattamento cardiovascolare e della prevenzione infortuni.
-- Fornisci sempre un consiglio pratico e azionabile (es. alimentazione, idratazione, allunghi, stretching o regolazione del passo).
-```
+4. **`get_activity_details`**
+   * Analisi approfondita di una singola corsa tramite `activity_id`.
+   * Split chilometrici con tempo parziale, passo, frequenza cardiaca media e dislivello di ogni frazione.
+   * Tempo e percentuale trascorsi in ciascuna delle 5 zone di frequenza cardiaca (Z1-Z5).
+   * Dinamiche di corsa avanzate: cadenza in passi al minuto, oscillazione verticale del busto e tempo di contatto con il suolo.
 
 ---
 
-## 🧪 7. Esecuzione dei Test Unitari
+## Test automatizzati
 
-Per verificare l'integrità del codice e della sicurezza in qualsiasi momento:
+Per eseguire la suite di test unitari sul codice:
 
 ```bash
 python -m unittest test_endpoints.py
 ```
 
+I test verificano l'isolamento della sicurezza degli endpoint, la corretta gestione delle chiavi API e la conformità degli schemi JSON restituiti.
+
 ---
 
-## 👨‍💻 Autore & Sviluppo
+## Autore e licenza
 
-* **Autore**: Sviluppato da **AK Dev.**
-* **Repository GitHub**: [github.com/AnasKabba/garmin-mcp-coach](https://github.com/AnasKabba/garmin-mcp-coach)
+* **Sviluppo**: AK Dev.
+* **Repository**: [github.com/AnasKabba/garmin-mcp-coach](https://github.com/AnasKabba/garmin-mcp-coach)
 * **Licenza**: MIT
